@@ -90,8 +90,8 @@ public:
 				return true;
 			idomIdx = m_immediateDominators[idomIdx];
 		}
-		// Now that we reach the entry node (i.e. idomIdx = 0),
-		// either ``aIdx == 0`` or it does not dominates the other node.
+		// Now that we reached the entry node (i.e. idomIdx = 0),
+		// either ``aIdx == 0`` or it does not dominate the other node.
 		solAssert(idomIdx == 0, "");
 		return aIdx == 0;
 	}
@@ -257,10 +257,10 @@ public:
 
 private:
 	/// Keep the list of vertices in the DFS order.
-	/// i.e. m_vertices[i]: the vertex whose DFS index is i.
+	/// i.e. m_vertices[i] is the vertex whose DFS index is i.
 	std::vector<Vertex> m_vertices;
 
-	/// Maps Vertex to their DFS index.
+	/// Maps Vertex to its DFS index.
 	std::map<Vertex, size_t> m_vertexIndices;
 
 	/// Immediate dominators by index.
@@ -272,7 +272,7 @@ private:
 	std::vector<size_t> m_immediateDominators;
 
 	/// Maps a Vertex to all vertices that it dominates.
-	/// If the vertex does not dominates any other vertex it has no entry in the map.
+	/// If the vertex does not dominate any other vertex it has no entry in the map.
 	std::map<size_t, std::vector<size_t>> m_dominatorTree;
 };
 }
