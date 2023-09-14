@@ -76,7 +76,7 @@ public:
 	// through the path from ``_b`` to the entry node.
 	// If ``_a`` is found, then it dominates ``_b``
 	// otherwise it doesn't.
-	bool dominates(Vertex const& _a, Vertex const& _b)
+	bool dominates(Vertex const& _a, Vertex const& _b) const
 	{
 		size_t aIdx = m_vertexIndex[_a];
 		size_t bIdx = m_vertexIndex[_b];
@@ -99,7 +99,7 @@ public:
 
 	// Find all dominators of a node _v
 	// @note for a vertex ``_v``, the _v’s inclusion in the set of dominators of ``_v`` is implicit.
-	std::vector<Vertex> dominatorsOf(Vertex const& _v)
+	std::vector<Vertex> dominatorsOf(Vertex const& _v) const
 	{
 		solAssert(!m_vertex.empty());
 		// The entry node always dominates all other nodes
@@ -134,7 +134,7 @@ public:
 		std::vector<size_t> &_label,
 		std::vector<size_t> &_semi,
 		size_t _v
-	)
+	) const
 	{
 		solAssert(_ancestor[_v] != std::numeric_limits<size_t>::max());
 		size_t u = _ancestor[_v];
