@@ -72,10 +72,10 @@ public:
 		return m_dominatorTree;
 	}
 
-	// Checks whether ``_a`` dominates ``_b`` by going
-	// through the path from ``_b`` to the entry node.
-	// If ``_a`` is found, then it dominates ``_b``
-	// otherwise it doesn't.
+	/// Checks whether ``_a`` dominates ``_b`` by going
+	/// through the path from ``_b`` to the entry node.
+	/// If ``_a`` is found, then it dominates ``_b``
+	/// otherwise it doesn't.
 	bool dominates(Vertex const& _a, Vertex const& _b) const
 	{
 		size_t aIdx = m_vertexIndex[_a];
@@ -97,8 +97,8 @@ public:
 		return aIdx == 0;
 	}
 
-	// Find all dominators of a node _v
-	// @note for a vertex ``_v``, the _v’s inclusion in the set of dominators of ``_v`` is implicit.
+	/// Find all dominators of a node _v
+	/// @note for a vertex ``_v``, the _v’s inclusion in the set of dominators of ``_v`` is implicit.
 	std::vector<Vertex> dominatorsOf(Vertex const& _v) const
 	{
 		solAssert(!m_vertex.empty());
@@ -127,8 +127,8 @@ public:
 			m_dominatorTree[idomIdx].emplace_back(idomIdx);
 	}
 
-	// Path compression updates the ancestors of vertices along
-	// the path to the ancestor with the minimum label value.
+	/// Path compression updates the ancestors of vertices along
+	/// the path to the ancestor with the minimum label value.
 	void compressPath(
 		std::vector<size_t> &_ancestor,
 		std::vector<size_t> &_label,
@@ -256,21 +256,21 @@ public:
 		return idom;
 	}
 private:
-	// Keep the list of vertices in the dfs order.
-	// i.e. m_vertex[i]: the vertex whose dfs index is i.
+	/// Keep the list of vertices in the dfs order.
+	/// i.e. m_vertex[i]: the vertex whose dfs index is i.
 	std::vector<Vertex> m_vertex;
-	// Maps Vertex to their dfs index.
+	/// Maps Vertex to their dfs index.
 	std::map<Vertex, size_t> m_vertexIndex;
-	// Immediate dominators by index.
-	// Maps a Vertex based on its dfs index (i.e. array index) to its immediate dominator dfs index.
-	//
-	// e.g. to get the immediate dominator of a Vertex w:
-	// idomIdx = m_immediateDominator[m_vertexIndex[w]]
-	// idomVertex = m_vertex[domIdx]
+	/// Immediate dominators by index.
+	/// Maps a Vertex based on its dfs index (i.e. array index) to its immediate dominator dfs index.
+	///
+	/// e.g. to get the immediate dominator of a Vertex w:
+	/// idomIdx = m_immediateDominator[m_vertexIndex[w]]
+	/// idomVertex = m_vertex[domIdx]
 	std::vector<size_t> m_immediateDominator;
 
-	// Maps a Vertex to all vertices that it dominates.
-	// If the vertex does not dominates any other vertex it has no entry in the map.
+	/// Maps a Vertex to all vertices that it dominates.
+	/// If the vertex does not dominates any other vertex it has no entry in the map.
 	std::map<size_t, std::vector<size_t>> m_dominatorTree;
 };
 }
