@@ -91,9 +91,10 @@ public:
 				return true;
 			idomIdx = m_immediateDominator[idomIdx];
 		}
-		// Now that we reach the entry node (i.e. idx = 0),
-		// either ``aIdx == 0`` or it does not dominates other node.
-		return idomIdx == aIdx;
+		// Now that we reach the entry node (i.e. idomIdx = 0),
+		// either ``aIdx == 0`` or it does not dominates the other node.
+		solAssert(idomIdx == 0, "");
+		return aIdx == 0;
 	}
 
 	// Find all dominators of a node _v
