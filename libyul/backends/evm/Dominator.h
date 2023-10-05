@@ -254,12 +254,15 @@ public:
 
 		return idom;
 	}
+
 private:
 	/// Keep the list of vertices in the dfs order.
 	/// i.e. m_vertices[i]: the vertex whose dfs index is i.
 	std::vector<Vertex> m_vertices;
+
 	/// Maps Vertex to their dfs index.
 	std::map<Vertex, size_t> m_vertexIndices;
+
 	/// Immediate dominators by index.
 	/// Maps a Vertex based on its dfs index (i.e. array index) to its immediate dominator dfs index.
 	///
