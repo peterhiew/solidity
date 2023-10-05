@@ -45,25 +45,25 @@ class Dominator
 public:
 
 	Dominator(Vertex const& _entry, size_t _numVertices):
-		m_vertex(_numVertices),
-		m_immediateDominator(lengauerTarjanDominator(_entry, _numVertices))
+		m_vertices(_numVertices),
+		m_immediateDominators(lengauerTarjanDominator(_entry, _numVertices))
 	{
 		buildDominatorTree();
 	}
 
 	std::vector<Vertex> const& vertices() const
 	{
-		return m_vertex;
+		return m_vertices;
 	}
 
 	std::map<Vertex, size_t> const& vertexIndices() const
 	{
-		return m_vertexIndex;
+		return m_vertexIndices;
 	}
 
 	std::vector<size_t> const& immediateDominators() const
 	{
-		return m_immediateDominator;
+		return m_immediateDominators;
 	}
 
 	std::map<size_t, std::vector<size_t>> const& dominatorTree() const
@@ -77,18 +77,18 @@ public:
 	/// otherwise it doesn't.
 	bool dominates(Vertex const& _a, Vertex const& _b) const
 	{
-		size_t aIdx = m_vertexIndex[_a];
-		size_t bIdx = m_vertexIndex[_b];
+		size_t aIdx = m_vertexIndices[_a];
+		size_t bIdx = m_vertexIndices[_b];
 
 		if (aIdx == bIdx)
 			return true;
 
-		size_t idomIdx = m_immediateDominator[bIdx];
+		size_t idomIdx = m_immediateDominators[bIdx];
 		while (idomIdx != 0)
 		{
 			if (idomIdx == aIdx)
 				return true;
-			idomIdx = m_immediateDominator[idomIdx];
+			idomIdx = m_immediateDominators[idomIdx];
 		}
 		// Now that we reach the entry node (i.e. idomIdx = 0),
 		// either ``aIdx == 0`` or it does not dominates the other node.
@@ -100,29 +100,29 @@ public:
 	/// @note for a vertex ``_v``, the _v’s inclusion in the set of dominators of ``_v`` is implicit.
 	std::vector<Vertex> dominatorsOf(Vertex const& _v) const
 	{
-		solAssert(!m_vertex.empty());
+		solAssert(!m_vertices.empty());
 		// The entry node always dominates all other nodes
-		std::vector<Vertex> dominators{m_vertex[0]};
+		std::vector<Vertex> dominators{m_vertices[0]};
 
-		size_t idomIdx = m_immediateDominator[m_vertexIndex[_v]];
+		size_t idomIdx = m_immediateDominators[m_vertexIndices[_v]];
 		if (idomIdx == 0)
 			return dominators;
 
 		while (idomIdx != 0)
 		{
-			dominators.emplace_back(m_vertex[idomIdx]);
-			idomIdx = m_immediateDominator[idomIdx];
+			dominators.emplace_back(m_vertices[idomIdx]);
+			idomIdx = m_immediateDominators[idomIdx];
 		}
 		return dominators;
 	}
 
 	void buildDominatorTree()
 	{
-		solAssert(!m_vertex.empty());
-		solAssert(!m_immediateDominator.empty());
+		solAssert(!m_vertices.empty());
+		solAssert(!m_immediateDominators.empty());
 
 		//Ignoring the entry node since no one dominates it.
-		for (size_t idomIdx: m_immediateDominator | ranges::views::drop(1))
+		for (size_t idomIdx: m_immediateDominators | ranges::views::drop(1))
 			m_dominatorTree[idomIdx].emplace_back(idomIdx);
 	}
 
@@ -182,7 +182,7 @@ public:
 			return _v;
 		};
 
-		auto toIdx = [&](Vertex const& v) { return m_vertexIndex[v]; };
+		auto toIdx = [&](Vertex const& v) { return m_vertexIndices[v]; };
 
 		// step 1
 		std::set<Vertex> visited;
@@ -200,24 +200,24 @@ public:
 			if (visited.count(_v))
 				return;
 			visited.insert(_v);
-			m_vertex[dfIdx] = _v;
-			m_vertexIndex[_v] = dfIdx;
+			m_vertices[dfIdx] = _v;
+			m_vertexIndices[_v] = dfIdx;
 			semi[dfIdx] = dfIdx;
 			label[dfIdx] = dfIdx;
 			dfIdx++;
 			ForEachSuccessor{}(_v, [&](Vertex const& w) {
 				if (semi[dfIdx] == std::numeric_limits<size_t>::max())
 				{
-					parent[dfIdx] = m_vertexIndex[_v];
+					parent[dfIdx] = m_vertexIndices[_v];
 					_dfs(w, _dfs);
 				}
-				predecessors[m_vertexIndex[w]].insert(m_vertexIndex[_v]);
+				predecessors[m_vertexIndices[w]].insert(m_vertexIndices[_v]);
 			});
 		};
 		dfs(_entry, dfs);
 
 		// Process the vertices in decreasing order of the dfs number
-		for (size_t w: m_vertex | ranges::views::reverse | ranges::views::transform(toIdx))
+		for (size_t w: m_vertices | ranges::views::reverse | ranges::views::transform(toIdx))
 		{
 			// step 3
 			// NOTE: this is an optimization, i.e. performing the step 3 before step 2.
@@ -248,7 +248,7 @@ public:
 
 		// step 4
 		idom[0] = 0;
-		for (size_t w: m_vertex | ranges::views::drop(1) | ranges::views::transform(toIdx))
+		for (size_t w: m_vertices | ranges::views::drop(1) | ranges::views::transform(toIdx))
 			if (idom[w] != semi[w])
 				idom[w] = idom[idom[w]];
 
@@ -256,17 +256,17 @@ public:
 	}
 private:
 	/// Keep the list of vertices in the dfs order.
-	/// i.e. m_vertex[i]: the vertex whose dfs index is i.
-	std::vector<Vertex> m_vertex;
+	/// i.e. m_vertices[i]: the vertex whose dfs index is i.
+	std::vector<Vertex> m_vertices;
 	/// Maps Vertex to their dfs index.
-	std::map<Vertex, size_t> m_vertexIndex;
+	std::map<Vertex, size_t> m_vertexIndices;
 	/// Immediate dominators by index.
 	/// Maps a Vertex based on its dfs index (i.e. array index) to its immediate dominator dfs index.
 	///
 	/// e.g. to get the immediate dominator of a Vertex w:
-	/// idomIdx = m_immediateDominator[m_vertexIndex[w]]
-	/// idomVertex = m_vertex[domIdx]
-	std::vector<size_t> m_immediateDominator;
+	/// idomIdx = m_immediateDominators[m_vertexIndices[w]]
+	/// idomVertex = m_vertices[domIdx]
+	std::vector<size_t> m_immediateDominators;
 
 	/// Maps a Vertex to all vertices that it dominates.
 	/// If the vertex does not dominates any other vertex it has no entry in the map.
