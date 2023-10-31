@@ -116,16 +116,6 @@ public:
 		return dominators;
 	}
 
-	void buildDominatorTree()
-	{
-		solAssert(!m_vertices.empty());
-		solAssert(!m_immediateDominators.empty());
-
-		//Ignoring the entry node since no one dominates it.
-		for (size_t idomIdx: m_immediateDominators | ranges::views::drop(1))
-			m_dominatorTree[idomIdx].emplace_back(idomIdx);
-	}
-
 	/// Path compression updates the ancestors of vertices along
 	/// the path to the ancestor with the minimum label value.
 	void compressPath(
@@ -256,6 +246,18 @@ public:
 	}
 
 private:
+	/// Build dominator tree from the immediate dominators set.
+	/// The function groups all the indices that are immediately dominated by a vertex.
+	void buildDominatorTree()
+	{
+		solAssert(!m_vertices.empty());
+		solAssert(!m_immediateDominators.empty());
+
+		//Ignoring the entry node since no one dominates it.
+		for (size_t index = 1; index < m_immediateDominators.size(); ++index)
+			m_dominatorTree[m_immediateDominators[index]].emplace_back(index);
+	}
+
 	/// Keep the list of vertices in the DFS order.
 	/// i.e. m_vertices[i] is the vertex whose DFS index is i.
 	std::vector<Vertex> m_vertices;
@@ -265,6 +267,7 @@ private:
 
 	/// Immediate dominators by index.
 	/// Maps a Vertex based on its DFS index (i.e. array index) to its immediate dominator DFS index.
+	/// The entry vertex is the first element of the vector.
 	///
 	/// e.g. to get the immediate dominator of a Vertex w:
 	/// idomIdx = m_immediateDominators[m_vertexIndices[w]]

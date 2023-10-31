@@ -58,7 +58,8 @@ struct ImmediateDominatorTest
 		std::vector<std::string> _vertices,
 		std::vector<Edge> _edges,
 		std::vector<size_t> _expectedIdom,
-		std::map<std::string, size_t> _expectedDFSIndices
+		std::map<std::string, size_t> _expectedDFSIndices,
+		std::map<size_t, std::vector<size_t>> _expectedDominatorTree = {}
 	)
 	{
 		soltestAssert(!_vertices.empty() && !_edges.empty());
@@ -75,6 +76,7 @@ struct ImmediateDominatorTest
 		numVertices = _vertices.size();
 		expectedIdom = _expectedIdom;
 		expectedDFSIndices = _expectedDFSIndices;
+		expectedDominatorTree = _expectedDominatorTree;
 	}
 
 	size_t numVertices = 0;
@@ -82,6 +84,7 @@ struct ImmediateDominatorTest
 	std::map<std::string, std::shared_ptr<Vertex>> vertices;
 	std::vector<size_t> expectedIdom;
 	std::map<std::string, size_t> expectedDFSIndices;
+	std::map<size_t, std::vector<size_t>> expectedDominatorTree;
 };
 
 class DominatorFixture
@@ -141,11 +144,20 @@ BOOST_FIXTURE_TEST_CASE(immediate_dominator_1, DominatorFixture)
 			{"F", 5},
 			{"G", 6},
 			{"H", 7},
+		},
+		{
+			{0, {1}},
+			{1, {2, 3, 5}},
+			{2, {6}},
+			{3, {4}},
+			{6, {7}}
 		}
 	);
+
 	DominatorFinder dominatorFinder(*test.entry, test.numVertices);
 	BOOST_TEST(toDFSIndices(dominatorFinder.vertexIndices()) == test.expectedDFSIndices);
 	BOOST_TEST(dominatorFinder.immediateDominators() == test.expectedIdom);
+	BOOST_TEST(dominatorFinder.dominatorTree() == test.expectedDominatorTree);
 }
 
 BOOST_FIXTURE_TEST_CASE(immediate_dominator_2, DominatorFixture)
@@ -181,11 +193,16 @@ BOOST_FIXTURE_TEST_CASE(immediate_dominator_2, DominatorFixture)
 			{"D", 4},
 			{"E", 5},
 			{"F", 6},
+		},
+		{
+			{0, {1, 2, 3, 4}},
+			{4, {5, 6}}
 		}
 	);
 	DominatorFinder dominatorFinder(*test.entry, test.numVertices);
 	BOOST_TEST(toDFSIndices(dominatorFinder.vertexIndices()) == test.expectedDFSIndices);
 	BOOST_TEST(dominatorFinder.immediateDominators() == test.expectedIdom);
+	BOOST_TEST(dominatorFinder.dominatorTree() == test.expectedDominatorTree);
 }
 
 BOOST_FIXTURE_TEST_CASE(immediate_dominator_3, DominatorFixture)
@@ -243,11 +260,17 @@ BOOST_FIXTURE_TEST_CASE(immediate_dominator_3, DominatorFixture)
 			{"H", 6},
 			{"G", 7},
 			{"F", 8},
+		},
+		{
+			{0, {1, 2, 3}},
+			{1, {4, 5, 6, 7}},
+			{5, {8}}
 		}
 	);
 	DominatorFinder dominatorFinder(*test.entry, test.numVertices);
 	BOOST_TEST(toDFSIndices(dominatorFinder.vertexIndices()) == test.expectedDFSIndices);
 	BOOST_TEST(dominatorFinder.immediateDominators() == test.expectedIdom);
+	BOOST_TEST(dominatorFinder.dominatorTree() == test.expectedDominatorTree);
 }
 
 BOOST_FIXTURE_TEST_CASE(langauer_tarjan_p122_fig1, DominatorFixture)
@@ -294,11 +317,18 @@ BOOST_FIXTURE_TEST_CASE(langauer_tarjan_p122_fig1, DominatorFixture)
 			{"F", 10},
 			{"G", 11},
 			{"J", 12},
+		},
+		{
+			{0, {1, 2, 3, 5, 6, 7, 8, 9}},
+			{3, {4}},
+			{9, {10, 11}},
+			{11, {12}}
 		}
 	);
 	DominatorFinder dominatorFinder(*test.entry, test.numVertices);
 	BOOST_TEST(toDFSIndices(dominatorFinder.vertexIndices()) == test.expectedDFSIndices);
 	BOOST_TEST(dominatorFinder.immediateDominators() == test.expectedIdom);
+	BOOST_TEST(dominatorFinder.dominatorTree() == test.expectedDominatorTree);
 }
 
 BOOST_FIXTURE_TEST_CASE(loukas_georgiadis, DominatorFixture)
@@ -338,11 +368,15 @@ BOOST_FIXTURE_TEST_CASE(loukas_georgiadis, DominatorFixture)
 			{"X6", 7},
 			{"X7", 8},
 			{"Y", 9},
+		},
+		{
+			{0, {1, 2, 3, 4, 5, 6, 7, 8, 9}}
 		}
 	);
 	DominatorFinder dominatorFinder(*test.entry, test.numVertices);
 	BOOST_TEST(toDFSIndices(dominatorFinder.vertexIndices()) == test.expectedDFSIndices);
 	BOOST_TEST(dominatorFinder.immediateDominators() == test.expectedIdom);
+	BOOST_TEST(dominatorFinder.dominatorTree() == test.expectedDominatorTree);
 }
 
 BOOST_FIXTURE_TEST_CASE(itworst, DominatorFixture)
@@ -393,11 +427,20 @@ BOOST_FIXTURE_TEST_CASE(itworst, DominatorFixture)
 			{"Z1", 10},
 			{"Z2", 11},
 			{"Z3", 12},
+		},
+		{
+			{0, {1, 2, 3, 4, 10, 11, 12}},
+			{4, {5}},
+			{5, {6}},
+			{6, {7}},
+			{7, {8}},
+			{8, {9}}
 		}
 	);
 	DominatorFinder dominatorFinder(*test.entry, test.numVertices);
 	BOOST_TEST(toDFSIndices(dominatorFinder.vertexIndices()) == test.expectedDFSIndices);
 	BOOST_TEST(dominatorFinder.immediateDominators() == test.expectedIdom);
+	BOOST_TEST(dominatorFinder.dominatorTree() == test.expectedDominatorTree);
 }
 
 BOOST_FIXTURE_TEST_CASE(idfsquad, DominatorFixture)
@@ -436,11 +479,17 @@ BOOST_FIXTURE_TEST_CASE(idfsquad, DominatorFixture)
 			{"Y3", 7},
 			{"X2", 8},
 			{"X3", 9},
+		},
+		{
+			{0, {1, 2, 3, 4, 5, 6, 7}},
+			{1, {8}},
+			{8, {9}}
 		}
 	);
 	DominatorFinder dominatorFinder(*test.entry, test.numVertices);
 	BOOST_TEST(toDFSIndices(dominatorFinder.vertexIndices()) == test.expectedDFSIndices);
 	BOOST_TEST(dominatorFinder.immediateDominators() == test.expectedIdom);
+	BOOST_TEST(dominatorFinder.dominatorTree() == test.expectedDominatorTree);
 }
 
 BOOST_FIXTURE_TEST_CASE(ibsfquad, DominatorFixture)
@@ -470,11 +519,16 @@ BOOST_FIXTURE_TEST_CASE(ibsfquad, DominatorFixture)
 			{"X3", 4},
 			{"Y", 5},
 			{"Z", 6},
+		},
+		{
+			{0, {1, 2, 3, 4, 5}},
+			{5, {6}}
 		}
 	);
 	DominatorFinder dominatorFinder(*test.entry, test.numVertices);
 	BOOST_TEST(toDFSIndices(dominatorFinder.vertexIndices()) == test.expectedDFSIndices);
 	BOOST_TEST(dominatorFinder.immediateDominators() == test.expectedIdom);
+	BOOST_TEST(dominatorFinder.dominatorTree() == test.expectedDominatorTree);
 }
 
 BOOST_FIXTURE_TEST_CASE(sncaworst, DominatorFixture)
@@ -504,11 +558,17 @@ BOOST_FIXTURE_TEST_CASE(sncaworst, DominatorFixture)
 			{"Y1", 4},
 			{"Y2", 5},
 			{"Y3", 6},
+		},
+		{
+			{0, {1, 4, 5, 6}},
+			{1, {2}},
+			{2, {3}}
 		}
 	);
 	DominatorFinder dominatorFinder(*test.entry, test.numVertices);
 	BOOST_TEST(toDFSIndices(dominatorFinder.vertexIndices()) == test.expectedDFSIndices);
 	BOOST_TEST(dominatorFinder.immediateDominators() == test.expectedIdom);
+	BOOST_TEST(dominatorFinder.dominatorTree() == test.expectedDominatorTree);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
