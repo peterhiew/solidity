@@ -46,7 +46,7 @@ public:
 
 	Dominator(Vertex const& _entry, size_t _numVertices):
 		m_vertices(_numVertices),
-		m_immediateDominators(lengauerTarjanDominator(_entry, _numVertices))
+		m_immediateDominators(findDominators(_entry, _numVertices))
 	{
 		buildDominatorTree();
 	}
@@ -77,17 +77,21 @@ public:
 	/// otherwise it doesn't.
 	bool dominates(Vertex const& _a, Vertex const& _b) const
 	{
-		size_t aIdx = m_vertexIndices[_a];
-		size_t bIdx = m_vertexIndices[_b];
+		solAssert(!m_vertexIndices.empty());
+		solAssert(!m_immediateDominators.empty());
+
+		size_t aIdx = m_vertexIndices.at(_a);
+		size_t bIdx = m_vertexIndices.at(_b);
 
 		if (aIdx == bIdx)
 			return true;
 
-		size_t idomIdx = m_immediateDominators[bIdx];
+		size_t idomIdx = m_immediateDominators.at(bIdx);
 		while (idomIdx != 0)
 		{
 			if (idomIdx == aIdx)
 				return true;
+			solAssert(m_immediateDominators.at(idomIdx) < idomIdx);
 			idomIdx = m_immediateDominators[idomIdx];
 		}
 		// Now that we reached the entry node (i.e. idomIdx = 0),
@@ -101,16 +105,20 @@ public:
 	std::vector<Vertex> dominatorsOf(Vertex const& _v) const
 	{
 		solAssert(!m_vertices.empty());
+		solAssert(!m_vertexIndices.empty());
+		solAssert(!m_immediateDominators.empty());
+
 		// The entry node always dominates all other nodes
 		std::vector<Vertex> dominators{m_vertices[0]};
 
-		size_t idomIdx = m_immediateDominators[m_vertexIndices[_v]];
+		size_t idomIdx = m_immediateDominators.at(m_vertexIndices.at(_v));
 		if (idomIdx == 0)
 			return dominators;
 
 		while (idomIdx != 0)
 		{
-			dominators.emplace_back(m_vertices[idomIdx]);
+			solAssert(m_immediateDominators.at(idomIdx) < idomIdx);
+			dominators.emplace_back(m_vertices.at(idomIdx));
 			idomIdx = m_immediateDominators[idomIdx];
 		}
 		return dominators;
@@ -134,9 +142,10 @@ public:
 				_label[_vIdx] = _label[uIdx];
 			_ancestor[_vIdx] = _ancestor[uIdx];
 		}
+		solAssert(_label[uIdx] <= _label[_vIdx]);
 	}
 
-	std::vector<size_t> lengauerTarjanDominator(Vertex const& _entry, size_t numVertices)
+	std::vector<size_t> findDominators(Vertex const& _entry, size_t numVertices)
 	{
 		solAssert(numVertices > 0);
 		// semi(w): The DFS index of the semidominator of ``w``.
@@ -221,6 +230,7 @@ public:
 				[&](size_t vIdx)
 				{
 					size_t uIdx = eval(vIdx);
+					solAssert(uIdx <= vIdx);
 					idom[vIdx] = (semi[uIdx] < semi[vIdx]) ? uIdx : wIdx;
 				}
 			);
@@ -229,11 +239,13 @@ public:
 			for (size_t vIdx: predecessors[wIdx])
 			{
 				size_t uIdx = eval(vIdx);
+				solAssert(uIdx <= vIdx);
 				if (semi[uIdx] < semi[wIdx])
 					semi[wIdx] = semi[uIdx];
 			}
 			bucket[semi[wIdx]].emplace_back(wIdx);
 			link(parent[wIdx], wIdx);
+			solAssert(ancestor[wIdx] == parent[wIdx]);
 		}
 
 		// step 4
@@ -250,12 +262,14 @@ private:
 	/// The function groups all the indices that are immediately dominated by a vertex.
 	void buildDominatorTree()
 	{
-		solAssert(!m_vertices.empty());
 		solAssert(!m_immediateDominators.empty());
 
 		//Ignoring the entry node since no one dominates it.
 		for (size_t index = 1; index < m_immediateDominators.size(); ++index)
+		{
+			solAssert(m_immediateDominators[index] < index);
 			m_dominatorTree[m_immediateDominators[index]].emplace_back(index);
+		}
 	}
 
 	/// Keep the list of vertices in the DFS order.
