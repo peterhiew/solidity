@@ -122,17 +122,17 @@ public:
 		std::vector<size_t> &_ancestor,
 		std::vector<size_t> &_label,
 		std::vector<size_t> &_semi,
-		size_t _v
+		size_t _vIdx
 	) const
 	{
-		solAssert(_ancestor[_v] != std::numeric_limits<size_t>::max());
-		size_t u = _ancestor[_v];
-		if (_ancestor[u] != std::numeric_limits<size_t>::max())
+		solAssert(_ancestor[_vIdx] != std::numeric_limits<size_t>::max());
+		size_t uIdx = _ancestor[_vIdx];
+		if (_ancestor[uIdx] != std::numeric_limits<size_t>::max())
 		{
-			compressPath(_ancestor, _label, _semi, u);
-			if (_semi[_label[u]] < _semi[_label[_v]])
-				_label[_v] = _label[u];
-			_ancestor[_v] = _ancestor[u];
+			compressPath(_ancestor, _label, _semi, uIdx);
+			if (_semi[_label[uIdx]] < _semi[_label[_vIdx]])
+				_label[_vIdx] = _label[uIdx];
+			_ancestor[_vIdx] = _ancestor[uIdx];
 		}
 	}
 
@@ -152,24 +152,24 @@ public:
 		std::vector<size_t> label(numVertices, 0);
 
 		// ``link`` adds an edge to the virtual forest.
-		// It copies the parent of w to the ancestor array to limit the search path upwards.
+		// It copies the ``parent`` index of the vertex ``w`` to the ancestor array to limit the search path upwards.
 		// TODO: implement sophisticated link-eval algorithm as shown in pg 132
 		// See: https://www.cs.princeton.edu/courses/archive/spr03/cs423/download/dominators.pdf
-		auto link = [&](size_t _parent, size_t _w)
+		auto link = [&](size_t _parentIdx, size_t _wIdx)
 		{
-			ancestor[_w] = _parent;
+			ancestor[_wIdx] = _parentIdx;
 		};
 
 		// ``eval`` computes the path compression.
 		// Finds ancestor with lowest semi-dominator DFS number (i.e. index).
-		auto eval = [&](size_t _v) -> size_t
+		auto eval = [&](size_t _vIdx) -> size_t
 		{
-			if (ancestor[_v] != std::numeric_limits<size_t>::max())
+			if (ancestor[_vIdx] != std::numeric_limits<size_t>::max())
 			{
-				compressPath(ancestor, label, semi, _v);
-				return label[_v];
+				compressPath(ancestor, label, semi, _vIdx);
+				return label[_vIdx];
 			}
-			return _v;
+			return _vIdx;
 		};
 
 		auto toIdx = [&](Vertex const& v) { return m_vertexIndices[v]; };
@@ -187,9 +187,9 @@ public:
 		// The vertices are indexed based on this number.
 		size_t dfIdx = 0;
 		auto dfs = [&](Vertex const& _v, auto _dfs) -> void {
-			if (visited.count(_v))
+			auto [_, inserted] = visited.insert(_v);
+			if (!inserted)
 				return;
-			visited.insert(_v);
 			m_vertices[dfIdx] = _v;
 			m_vertexIndices[_v] = dfIdx;
 			semi[dfIdx] = dfIdx;
@@ -207,7 +207,7 @@ public:
 		dfs(_entry, dfs);
 
 		// Process the vertices in decreasing order of the DFS number
-		for (size_t w: m_vertices | ranges::views::reverse | ranges::views::transform(toIdx))
+		for (size_t wIdx: m_vertices | ranges::views::reverse | ranges::views::transform(toIdx))
 		{
 			// step 3
 			// NOTE: this is an optimization, i.e. performing the step 3 before step 2.
@@ -217,30 +217,30 @@ public:
 			// it does not need to be erased.
 			// The optimization proposal is available here: https://jgaa.info/accepted/2006/GeorgiadisTarjanWerneck2006.10.1.pdf pg.77
 			ranges::for_each(
-				bucket[w],
-				[&](size_t v)
+				bucket[wIdx],
+				[&](size_t vIdx)
 				{
-					size_t u = eval(v);
-					idom[v] = (semi[u] < semi[v]) ? u : w;
+					size_t uIdx = eval(vIdx);
+					idom[vIdx] = (semi[uIdx] < semi[vIdx]) ? uIdx : wIdx;
 				}
 			);
 
 			// step 2
-			for (size_t v: predecessors[w])
+			for (size_t vIdx: predecessors[wIdx])
 			{
-				size_t u = eval(v);
-				if (semi[u] < semi[w])
-					semi[w] = semi[u];
+				size_t uIdx = eval(vIdx);
+				if (semi[uIdx] < semi[wIdx])
+					semi[wIdx] = semi[uIdx];
 			}
-			bucket[semi[w]].emplace_back(w);
-			link(parent[w], w);
+			bucket[semi[wIdx]].emplace_back(wIdx);
+			link(parent[wIdx], wIdx);
 		}
 
 		// step 4
 		idom[0] = 0;
-		for (size_t w: m_vertices | ranges::views::drop(1) | ranges::views::transform(toIdx))
-			if (idom[w] != semi[w])
-				idom[w] = idom[idom[w]];
+		for (size_t wIdx: m_vertices | ranges::views::drop(1) | ranges::views::transform(toIdx))
+			if (idom[wIdx] != semi[wIdx])
+				idom[wIdx] = idom[idom[wIdx]];
 
 		return idom;
 	}
