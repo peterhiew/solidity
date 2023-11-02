@@ -25,6 +25,7 @@
 
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/transform.hpp>
+#include <range/v3/view/iota.hpp>
 
 using namespace solidity::yul;
 
@@ -59,7 +60,7 @@ struct ImmediateDominatorTest
 		std::vector<Edge> _edges,
 		std::vector<size_t> _expectedIdom,
 		std::map<std::string, size_t> _expectedDFSIndices,
-		std::map<size_t, std::vector<size_t>> _expectedDominatorTree = {}
+		std::map<size_t, std::vector<size_t>> _expectedDominatorTree
 	)
 	{
 		soltestAssert(!_vertices.empty() && !_edges.empty());
@@ -97,6 +98,13 @@ protected:
 			return {_pair.first.name, _pair.second};
 		};
 		return _vertexIndices | ranges::views::transform(convertIndex) | ranges::to<std::map<std::string, size_t>>;
+	}
+
+	std::vector<std::string> dominatorsByVertexName(std::vector<Vertex const*> const& _dominators)
+	{
+		return _dominators | ranges::views::transform([](Vertex const* d){
+			return d->name;
+		}) | ranges::to<std::vector<std::string>>;
 	}
 };
 
@@ -570,6 +578,185 @@ BOOST_FIXTURE_TEST_CASE(sncaworst, DominatorFixture)
 	BOOST_TEST(dominatorFinder.immediateDominators() == test.expectedIdom);
 	BOOST_TEST(dominatorFinder.dominatorTree() == test.expectedDominatorTree);
 }
+
+BOOST_FIXTURE_TEST_CASE(collect_all_dominators_of_a_vertex, DominatorFixture)
+{
+	//            A
+	//            │
+	//            ▼
+	//        ┌───B
+	//        │   │
+	//        ▼   │
+	//        C ──┼───┐
+	//        │   │   │
+	//        ▼   │   ▼
+	//        D◄──┘   G
+	//        │       │
+	//        ▼       ▼
+	//        E       H
+	//        │       │
+	//        └──►F◄──┘
+	ImmediateDominatorTest test(
+		{"A", "B", "C", "D", "E", "F", "G", "H"},
+		{
+			Edge("A", "B"),
+			Edge("B", "C"),
+			Edge("B", "D"),
+			Edge("C", "D"),
+			Edge("C", "G"),
+			Edge("D", "E"),
+			Edge("E", "F"),
+			Edge("G", "H"),
+			Edge("H", "F"),
+		},
+		{},
+		{},
+		{}
+	);
+
+	DominatorFinder dominatorFinder(*test.entry, test.numVertices);
+	BOOST_TEST(dominatorsByVertexName(dominatorFinder.dominatorsOf(*test.vertices["A"])) == std::vector<std::string>());
+	BOOST_TEST(dominatorsByVertexName(dominatorFinder.dominatorsOf(*test.vertices["B"])) == std::vector<std::string>({"A"}));
+	BOOST_TEST(dominatorsByVertexName(dominatorFinder.dominatorsOf(*test.vertices["C"])) == std::vector<std::string>({"B", "A"}));
+	BOOST_TEST(dominatorsByVertexName(dominatorFinder.dominatorsOf(*test.vertices["D"])) == std::vector<std::string>({"B", "A"}));
+	BOOST_TEST(dominatorsByVertexName(dominatorFinder.dominatorsOf(*test.vertices["E"])) == std::vector<std::string>({"D", "B", "A"}));
+	BOOST_TEST(dominatorsByVertexName(dominatorFinder.dominatorsOf(*test.vertices["F"])) == std::vector<std::string>({"B", "A"}));
+	BOOST_TEST(dominatorsByVertexName(dominatorFinder.dominatorsOf(*test.vertices["G"])) == std::vector<std::string>({"C", "B", "A"}));
+	BOOST_TEST(dominatorsByVertexName(dominatorFinder.dominatorsOf(*test.vertices["H"])) == std::vector<std::string>({"G", "C", "B", "A"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(dominators_of_a_non_existent_vertex, DominatorFixture)
+{
+	ImmediateDominatorTest test(
+		{"A", "B", "C", "D"},
+		{
+			Edge("A", "B"),
+			Edge("B", "C"),
+			Edge("B", "D"),
+		},
+		{},
+		{},
+		{}
+	);
+
+	DominatorFinder dominatorFinder(*test.entry, test.numVertices);
+	BOOST_CHECK_THROW(dominatorsByVertexName(dominatorFinder.dominatorsOf(Vertex{"Z", {}})), util::ElementNotFound);
+}
+
+BOOST_FIXTURE_TEST_CASE(check_dominance, DominatorFixture)
+{
+	//            A
+	//            │
+	//            ▼
+	//        ┌───B
+	//        │   │
+	//        ▼   │
+	//        C ──┼───┐
+	//        │   │   │
+	//        ▼   │   ▼
+	//        D◄──┘   G
+	//        │       │
+	//        ▼       ▼
+	//        E       H
+	//        │       │
+	//        └──►F◄──┘
+	ImmediateDominatorTest test(
+		{"A", "B", "C", "D", "E", "F", "G", "H"},
+		{
+			Edge("A", "B"),
+			Edge("B", "C"),
+			Edge("B", "D"),
+			Edge("C", "D"),
+			Edge("C", "G"),
+			Edge("D", "E"),
+			Edge("E", "F"),
+			Edge("G", "H"),
+			Edge("H", "F"),
+		},
+		{},
+		{
+			{"A", 0},
+			{"B", 1},
+			{"C", 2},
+			{"D", 3},
+			{"E", 4},
+			{"F", 5},
+			{"G", 6},
+			{"H", 7},
+		},
+		{}
+	);
+
+	auto makeDominanceVertexRelation = [&](std::vector<size_t> _indices = {}){
+		std::vector<bool> dominance(test.numVertices, false);
+		for (auto i: _indices)
+		{
+			soltestAssert(i < test.numVertices);
+			dominance[i] = true;
+		}
+		return dominance;
+	};
+
+	// Dominance truth table for all vertices.
+	// Note that it includes self-dominance relation.
+	std::vector<std::vector<bool>> expectedDominanceByVertex = {
+		makeDominanceVertexRelation(ranges::views::iota(0u, static_cast<unsigned>(test.numVertices)) | ranges::to<std::vector<size_t>>), // A dominates all vertices, including itself
+		makeDominanceVertexRelation(ranges::views::iota(1u, static_cast<unsigned>(test.numVertices)) | ranges::to<std::vector<size_t>>), // B, C, D, E, F, G, H
+		makeDominanceVertexRelation({2, 6, 7}), // C, G, H
+		makeDominanceVertexRelation({3, 4}),    // D, E
+		makeDominanceVertexRelation({4}),       // E
+		makeDominanceVertexRelation({5}),       // F
+		makeDominanceVertexRelation({6, 7}),    // G, H
+		makeDominanceVertexRelation({7})        // H
+	};
+
+	soltestAssert(expectedDominanceByVertex.size() == test.numVertices);
+
+	DominatorFinder dominatorFinder(*test.entry, test.numVertices);
+
+	// Asserts that the indices are computed correctly, since we need a reverse map from indices to vertex name
+	// to retrieve the respective vertices in the test below.
+	BOOST_TEST(toDFSIndices(dominatorFinder.vertexIndices()) == test.expectedDFSIndices);
+	std::map<size_t, std::string> reverseDFSIndicesMap = test.expectedDFSIndices | ranges::views::transform([](auto const& pair){
+		return std::make_pair(pair.second, pair.first);
+	}) | ranges::to<std::map<size_t, std::string>>;
+
+	for (size_t i = 0; i < expectedDominanceByVertex.size(); ++i)
+	{
+		soltestAssert(expectedDominanceByVertex[i].size() == test.numVertices);
+		for (size_t j = 0; j < expectedDominanceByVertex[i].size(); ++j)
+		{
+			bool result = dominatorFinder.dominates(*test.vertices[reverseDFSIndicesMap[i]], *test.vertices[reverseDFSIndicesMap[j]]);
+			BOOST_CHECK_MESSAGE(
+				result == expectedDominanceByVertex[i][j],
+				"Vertex: " + reverseDFSIndicesMap[i] + " (" + std::to_string(i) + ") expected to" +
+				(expectedDominanceByVertex[i][j] ? "" : " not") +
+				" dominates vertex " + reverseDFSIndicesMap[j] + " (" + std::to_string(j) + ") but returned: " +
+				std::to_string(result)
+            );
+		}
+	}
+}
+
+BOOST_FIXTURE_TEST_CASE(check_dominance_of_non_existent_vertex, DominatorFixture)
+{
+	ImmediateDominatorTest test(
+		{"A", "B", "C", "D"},
+		{
+			Edge("A", "B"),
+			Edge("B", "C"),
+			Edge("B", "D"),
+		},
+		{},
+		{},
+		{}
+	);
+
+	DominatorFinder dominatorFinder(*test.entry, test.numVertices);
+	BOOST_CHECK_THROW(dominatorFinder.dominates(Vertex{"Z", {}}, *test.vertices["A"]), util::ElementNotFound);
+}
+
+
 
 BOOST_AUTO_TEST_SUITE_END()
 
