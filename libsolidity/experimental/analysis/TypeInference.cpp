@@ -703,9 +703,8 @@ bool TypeInference::visit(TypeClassInstantiation const& _typeClassInstantiation)
 
 	auto const& classFunctions = annotation().typeClassFunctions.at(*typeClass);
 
-	Type maybeClassVar = m_typeSystem.typeClassVariable(*typeClass);
-	TypeVariable const* classVar = std::get_if<TypeVariable>(&maybeClassVar);
-	solAssert(classVar);
+	solAssert(std::holds_alternative<TypeVariable>(m_typeSystem.typeClassVariable(*typeClass)));
+	TypeVariable classVar = std::get<TypeVariable>(m_typeSystem.typeClassVariable(*typeClass));
 
 	for (auto [name, classFunctionType]: classFunctions)
 	{
@@ -714,7 +713,7 @@ bool TypeInference::visit(TypeClassInstantiation const& _typeClassInstantiation)
 			m_errorReporter.typeError(6948_error, _typeClassInstantiation.location(), "Missing function: " + name);
 			continue;
 		}
-		Type instantiatedClassFunctionType = TypeEnvironmentHelpers{*m_env}.substitute(classFunctionType, *classVar, type);
+		Type instantiatedClassFunctionType = TypeEnvironmentHelpers{*m_env}.substitute(classFunctionType, classVar, type);
 
 		Type instanceFunctionType = functionTypes.at(name);
 		functionTypes.erase(name);
